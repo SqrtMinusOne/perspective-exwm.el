@@ -71,7 +71,6 @@ buffer after the switch is highlighted with `warning', skipped
 buffer is highlighted with `persp-selected-face'"
   (let* ((current (current-buffer))
          (ignore-rx (persp--make-ignore-buffer-rx))
-         (visible-buffers '())
          (exwm-data
           (cl-loop for buf in (persp-current-buffers)
                    for is-another = (and (get-buffer-window buf) (not (eq current buf)))
@@ -221,7 +220,8 @@ variable `perspective-exwm-workspace--create-index'."
 (defun perspective-exwm--init-frame-around (fun &rest args)
   "An advice around `persp-init-frame'.
 
-Overrides `persp-initial-frame-name' according to `perspective-exwm-override-initial-name'."
+Overrides `persp-initial-frame-name' according to
+`perspective-exwm-override-initial-name'."
   (let* ((workspace-index
           (or (and (numberp perspective-exwm-workspace--create-index)
                    perspective-exwm-workspace--create-index)
@@ -233,6 +233,21 @@ Overrides `persp-initial-frame-name' according to `perspective-exwm-override-ini
            (format "main-%s" (funcall exwm-workspace-index-map workspace-index)))))
     (apply fun args)))
 
+(defun perspective-exwm--after-exwm-init ()
+  "Create perspectives in workspaces in accordance with `perspective-exwm-override-initial-name'.
+
+This is meant to be run from `exwm-init-hook'."
+  (cl-loop for workspace-index from 0 to (exwm-workspace--count)
+           for frame in exwm-workspace--list
+           for target-name = (or
+                              (cdr (assoc workspace-index
+                                          perspective-exwm-override-initial-name))
+                              (format "main-%s" (funcall exwm-workspace-index-map workspace-index)))
+           do (with-selected-frame frame
+                (let ((current-name (persp-current-name)))
+                  (unless (string-equal current-name target-name)
+                    (persp-switch target-name)
+                    (persp-kill current-name))))))
 ;;;###autoload
 (defun perspective-exwm-revive-perspectives ()
   "Make perspectives in the current frame not killed."
@@ -277,13 +292,15 @@ inital workspaces are created with the new perspective names."
           (advice-add #'persp-init-frame
                       :around #'perspective-exwm--init-frame-around)
           (advice-add #'exwm-workspace-switch-create
-                      :around #'perspective-exwm--workspace-switch-create-around))
+                      :around #'perspective-exwm--workspace-switch-create-around)
+          (add-hook 'exwm-init-hook #'perspective-exwm--after-exwm-init))
       (advice-remove #'persp-delete-frame
                      #'perspective-exwm--delete-frame-around)
       (advice-remove #'persp-init-frame
                      #'perspective-exwm--init-frame-around)
       (advice-remove #'exwm-workspace-switch-create
-                     #'perspective-exwm--workspace-switch-create-around))))
+                     #'perspective-exwm--workspace-switch-create-around)
+      (remove-hook 'exwm-init-hook #'perspective-exwm--after-exwm-init))))
 
 (provide 'perspective-exwm)
 ;;; perspective-exwm.el ends here
