@@ -232,8 +232,41 @@ Overrides `persp-initial-frame-name' according to `perspective-exwm-override-ini
     (apply fun args)))
 
 ;;;###autoload
+(defun perspective-exwm-revive-perspectives ()
+  "Make perspectives in the current frame not killed."
+  (interactive)
+  (let ((to-switch nil))
+    (maphash
+     (lambda (_ v)
+       (setf (persp-killed v) nil)
+       (unless to-switch
+         (setq to-switch v)))
+     (frame-parameter nil 'persp--hash))
+    (when to-switch
+      (persp-switch (persp-name to-switch)))))
+
+
+
+;;;###autoload
 (define-minor-mode perspective-exwm-mode
-  "A minor mode for intergrating perspective.el and EXWM."
+  "A minor mode for intergrating perspective.el and EXWM.
+
+The mode does a couple of things:
+ - fixes a bug with half-killing the current perspective when closing
+   a floating window.  I haven't tested this as thoroughly, so run
+   `perspective-exwm-revive-perspectives' if the problem arises
+   anyway.
+ - adjusts the name of the inital perspective in the new workspace.
+   It tries to get the name from the
+   `perspective-exwm-override-initial-name' variable and falls back to
+   \"main-<index>\".
+
+The latter also serves a purpose, because otherwise there are
+issues with multiple perspectives sharing the same scratch
+buffer.
+
+Be sure to activate this mode before `exwm-enable', so that the
+inital workspaces are created with the new perspective names."
   :global t
   :after-hook
   (progn
@@ -251,8 +284,6 @@ Overrides `persp-initial-frame-name' according to `perspective-exwm-override-ini
                      #'perspective-exwm--init-frame-around)
       (advice-remove #'exwm-workspace-switch-create
                      #'perspective-exwm--workspace-switch-create-around))))
-
-(advice-mapc 'prin1-to-string 'persp-delete-frame)
 
 (provide 'perspective-exwm)
 ;;; perspective-exwm.el ends here
