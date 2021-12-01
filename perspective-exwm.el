@@ -1,4 +1,4 @@
-;;; perspective-exwm.el --- Yet another Pomodoro timer implementation -*- lexical-binding: t -*-
+;;; perspective-exwm.el --- Better integration for perspective.el and EXWM -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2021 Korytov Pavel
 
