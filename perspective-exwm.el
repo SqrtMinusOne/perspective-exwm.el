@@ -158,7 +158,7 @@ detail."
 
 ;;;###autoload
 (defun perspective-exwm-copy-to-workspace (&optional move)
-  "Copy the current perspective to an EXWM workspace.
+  "Copy the current perspective to another EXWM workspace.
 
 If MOVE is t, move the perspective instead."
   (interactive)
@@ -171,6 +171,8 @@ If MOVE is t, move the perspective instead."
     (unless (= (cl-position target-workspace exwm-workspace--list)
                exwm-workspace-current-index)
       (with-selected-frame target-workspace
+        (when (gethash persp-name (perspectives-hash))
+          (error "Perspective with name \"%s\" already exists on the target workspace" persp-name))
         (puthash persp-name (copy-tree (copy-perspective persp)) (perspectives-hash))
         (with-perspective persp-name
           ;; (run-hooks 'persp-created-hook)
@@ -244,8 +246,6 @@ Overrides `persp-initial-frame-name' according to `perspective-exwm-override-ini
      (frame-parameter nil 'persp--hash))
     (when to-switch
       (persp-switch (persp-name to-switch)))))
-
-
 
 ;;;###autoload
 (define-minor-mode perspective-exwm-mode
