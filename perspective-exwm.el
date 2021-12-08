@@ -5,7 +5,7 @@
 
 ;; Author: Korytov Pavel <thexcloud@gmail.com>
 ;; Maintainer: Korytov Pavel <thexcloud@gmail.com>
-;; Version: 0.1.0
+;; Version: 0.1.1
 ;; Package-Requires: ((emacs "27.1") (burly "0.2-pre") (exwm "0.26") (perspective "2.17"))
 ;; Homepage: https://github.com/SqrtMinusOne/perspective-exwm.el
 
