@@ -20,12 +20,13 @@ The package provides a minor mode, =perspective-exwm-mode=, which is meant to be
 #+end_src
 
 * Usage and details
-- =perspective-exwm-mode=
+- =perspective-exwm-mode=\\
   The mode does a couple of things:
   - advises away a bug with half-killing the current perspective when closing a floating window. I haven't tested this as thoroughly, so run =M-x perspective-exwm-revive-perspectives= if the problem arises anyway.
-  - adjusts the name of the inital perspective in the new workspace. It tries to get the name from the =perspective-exwm-override-initial-name= variable and falls back to `main-<index>`.
+  - fixes a bug with running =persp-set-buffer= on an EXWM buffer that was moved between workspaces by advising =persp-buffer-in-other-p=.
+  - adjusts the name of the inital perspective in the new workspace. It tries to get the name from the =perspective-exwm-override-initial-name= variable and fallbacks to =main-<index>=.
 
-  I have the following in my configuration:
+  For the last point, I have the following in my configuration:
   #+begin_src emacs-lisp
   (setq perspective-exwm-override-initial-name
       '((0 . "misc")
@@ -36,7 +37,7 @@ The package provides a minor mode, =perspective-exwm-mode=, which is meant to be
   #+end_src
 
   This also serves a purpose, because otherwise there are issues with multiple perspectives sharing the same scratch buffer.
-- =M-x perspective-exwm-cycle-exwm-buffers-forward=, =perspective-exwm-cycle-exwm-buffers-backward=
+- =M-x perspective-exwm-cycle-exwm-buffers-forward=, =perspective-exwm-cycle-exwm-buffers-backward=\\
   Cycles EXWM buffers in the current perspective.
 
   [[./img/cycle-buffers.png]]
@@ -45,11 +46,31 @@ The package provides a minor mode, =perspective-exwm-mode=, which is meant to be
 
   Set =perspective-exwm-get-exwm-buffer-name= to customize the displayed name, by default it's =exwm-class-name=.
 
-- =M-x perspective-exwm-switch-perspective=
+- =M-x perspective-exwm-switch-perspective=\\
   Select a perspective from the list of all perspectives on all workspaces.
 
   [[./img/switch-perspective.png]]
-- =M-x perspective-exwm-copy-to-workspace=
+- =M-x perspective-exwm-copy-to-workspace=\\
   Copy the current perspective to another EXWM workspace.
-- =M-x perspective-exwm-move-to-workspace=
+- =M-x perspective-exwm-move-to-workspace=\\
   Move the current perspective to another EXWM workspace.
+- =perspective-exwm-assign-windows=\\
+  A handy function to move the current window to a given workspace and/or perspective. Example usage:
+  #+begin_src emacs-lisp
+  (defun my/exwm-configure-window ()
+    (interactive)
+    (pcase exwm-class-name
+      ((or "Firefox" "Nightly")
+       (perspective-exwm-assign-window
+        :workspace-index 2
+        :persp-name "browser"))
+      ("Alacritty"
+       (perspective-exwm-assign-window
+        :persp-name "term"))
+      ((or "VK" "Slack" "Discord" "TelegramDesktop")
+       (perspective-exwm-assign-window
+        :workspace-index 3
+        :persp-name "comms"))))
+
+  (add-hook 'exwm-manage-finish-hook #'my/exwm-configure-window)
+  #+end_src

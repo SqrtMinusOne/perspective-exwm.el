@@ -1,6 +1,7 @@
 ;;; perspective-exwm.el --- Better integration for perspective.el and EXWM -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2021 Korytov Pavel
+;; Copyright (C) 2008-2020 Natalie Weizenbaum <nex342@gmail.com>
 
 ;; Author: Korytov Pavel <thexcloud@gmail.com>
 ;; Maintainer: Korytov Pavel <thexcloud@gmail.com>
@@ -234,7 +235,8 @@ Overrides `persp-initial-frame-name' according to
     (apply fun args)))
 
 (defun perspective-exwm--after-exwm-init ()
-  "Create perspectives in workspaces in accordance with `perspective-exwm-override-initial-name'.
+  "Create perspectives in workspaces in accordance with
+  `perspective-exwm-override-initial-name'.
 
 This is meant to be run from `exwm-init-hook'."
   (cl-loop for workspace-index from 0 to (exwm-workspace--count)
@@ -248,6 +250,31 @@ This is meant to be run from `exwm-init-hook'."
                   (unless (string-equal current-name target-name)
                     (persp-switch target-name)
                     (persp-kill current-name))))))
+
+
+(cl-defun perspective-exwm--persp-buffer-in-other-p (buffer)
+  "Returns nil if BUFFER is only in the current perspective.
+Otherwise, returns (FRAME . NAME), the frame and name of another
+perspective that has the buffer.
+
+Prefers perspectives in the selected frame.
+
+This version of the function also excludes EXWM buffers from
+appearing to be in other frames, because an EXWM buffer can be
+only in one frame."
+  (cl-loop for frame in
+           (sort (frame-list)
+                 (lambda (_frame1 frame2) (not (eq frame2 (selected-frame)))))
+           do (cl-loop for persp being the hash-values of (perspectives-hash frame)
+                       if (and (not (and (equal frame (selected-frame))
+                                         (equal (persp-name persp) (persp-name (persp-curr frame)))))
+                               (not (and (not (equal frame (selected-frame)))
+                                         (eq (buffer-local-value 'major-mode buffer) 'exwm-mode)))
+                               (memq buffer (persp-buffers persp)))
+                       do (cl-return-from perspective-exwm--persp-buffer-in-other-p
+                            (cons frame (persp-name persp)))))
+  nil)
+
 ;;;###autoload
 (defun perspective-exwm-revive-perspectives ()
   "Make perspectives in the current frame not killed."
@@ -263,6 +290,35 @@ This is meant to be run from `exwm-init-hook'."
       (persp-switch (persp-name to-switch)))))
 
 ;;;###autoload
+(cl-defun perspective-exwm-assign-window (&key workspace-index persp-name)
+  "Move current the buffer to another workspace and/or perspective.
+
+WORKSPACE-INDEX is index of the workspace as in
+`exwm-workspace--list'.  PERSP-NAME is the name of the target
+perspective.
+
+The function is useful to be ran from `exwm-manage-finish-hook',
+e.g. like this:
+(defun my/exwm-configure-window ()
+  (interactive)
+  (pcase exwm-class-name
+    ((or \"Firefox\" \"Nightly\") (perspective-exwm-assign-window
+                               :workspace-index 2
+                               :persp-name \"browser\"))))
+"
+  (let ((buffer-name (buffer-name))
+        (buffer (current-buffer)))
+    (when (and workspace-index (not (= workspace-index exwm-workspace-current-index)))
+      (exwm-workspace-move-window workspace-index))
+    (when persp-name
+      (with-selected-frame (nth (or workspace-index
+                                    exwm-workspace-current-index)
+                                exwm-workspace--list)
+        (with-perspective persp-name
+          (persp-set-buffer buffer))
+        (persp-switch-to-buffer buffer)))))
+
+;;;###autoload
 (define-minor-mode perspective-exwm-mode
   "A minor mode for intergrating perspective.el and EXWM.
 
@@ -271,6 +327,8 @@ The mode does a couple of things:
    a floating window.  I haven't tested this as thoroughly, so run
    `perspective-exwm-revive-perspectives' if the problem arises
    anyway.
+ - fixes a bug with running `persp-set-buffer' on an EXWM buffer that
+   was moved between workspaces by advising `persp-buffer-in-other-p'.
  - adjusts the name of the inital perspective in the new workspace.
    It tries to get the name from the
    `perspective-exwm-override-initial-name' variable and falls back to
@@ -293,6 +351,8 @@ inital workspaces are created with the new perspective names."
                       :around #'perspective-exwm--init-frame-around)
           (advice-add #'exwm-workspace-switch-create
                       :around #'perspective-exwm--workspace-switch-create-around)
+          (advice-add #'persp-buffer-in-other-p
+                      :override #'perspective-exwm--persp-buffer-in-other-p)
           (add-hook 'exwm-init-hook #'perspective-exwm--after-exwm-init))
       (advice-remove #'persp-delete-frame
                      #'perspective-exwm--delete-frame-around)
@@ -300,6 +360,8 @@ inital workspaces are created with the new perspective names."
                      #'perspective-exwm--init-frame-around)
       (advice-remove #'exwm-workspace-switch-create
                      #'perspective-exwm--workspace-switch-create-around)
+      (advice-remove #'persp-buffer-in-other-p
+                     #'perspective-exwm--persp-buffer-in-other-p)
       (remove-hook 'exwm-init-hook #'perspective-exwm--after-exwm-init))))
 
 (provide 'perspective-exwm)
