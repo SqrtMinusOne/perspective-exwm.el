@@ -5,7 +5,7 @@
 
 ;; Author: Korytov Pavel <thexcloud@gmail.com>
 ;; Maintainer: Korytov Pavel <thexcloud@gmail.com>
-;; Version: 0.1.1
+;; Version: 0.1.2
 ;; Package-Requires: ((emacs "27.1") (burly "0.2-pre") (exwm "0.26") (perspective "2.17"))
 ;; Homepage: https://github.com/SqrtMinusOne/perspective-exwm.el
 
@@ -35,7 +35,7 @@
 (require 'cl-lib)
 
 (defgroup perspective-exwm nil
-  "Integration between perspective.el and EXWM"
+  "Integration between perspective.el and EXWM."
   :group 'frames)
 
 (defun perspective-exwm--get-class ()
@@ -62,9 +62,9 @@ Meant to be ran in the context of the target buffer, e.g. with
 (defun perspective-exwm--cycle-exwm-buffers (dir)
   "Cycle EXWM buffers in the current perspective.
 
-DIR is either 'forward or 'backward. A buffer is skipped if it is
+DIR is either 'forward or 'backward.  A buffer is skipped if it is
 already displayed in some other window of the current
-perspective. The buffer name comes from
+perspective.  The buffer name comes from
 `perspective-exwm-get-exwm-buffer-name'.
 
 The function prints out the state to the messages.  The current
@@ -275,6 +275,33 @@ only in one frame."
                             (cons frame (persp-name persp)))))
   nil)
 
+(defun perspective-exwm--persp-set-buffer-override (buffer-or-name)
+  "Associate BUFFER-OR-NAME with the current perspective and remove
+it from any other.
+
+The original version `persp-set-buffer' from perspective.el
+sometimes copies perspectives from all other workspaces to the
+current one.  This version stabilizes that behaviour by wrapping
+calls to `persp-forget-buffer' in `with-selected-frame'."
+  (interactive
+   (list
+    (let ((read-buffer-function nil))
+      (read-buffer "Set buffer to perspective: "))))
+  (let ((buffer (get-buffer buffer-or-name)))
+    (if (not (buffer-live-p buffer))
+        (message "buffer %s doesn't exist" buffer-or-name)
+      (persp-add-buffer buffer)
+      ;; Do not use the combination "while `persp-buffer-in-other-p'",
+      ;; if the buffer is not removed from other perspectives, it will
+      ;; go into an infinite loop.
+      (cl-loop with current-persp-name = (persp-current-name)
+               for frame in exwm-workspace--list
+               do (with-selected-frame frame
+                    (cl-loop for persp-name being the hash-keys of (perspectives-hash)
+                             unless (string-equal persp-name current-persp-name)
+                             do (with-perspective persp-name
+                                  (persp-forget-buffer buffer))))))))
+
 ;;;###autoload
 (defun perspective-exwm-revive-perspectives ()
   "Make perspectives in the current frame not killed."
@@ -329,6 +356,8 @@ The mode does a couple of things:
    anyway.
  - fixes a bug with running `persp-set-buffer' on an EXWM buffer that
    was moved between workspaces by advising `persp-buffer-in-other-p'.
+ - fixes a bug when occasionally `persp-set-buffer' copied all the
+   perspectives from another workspaces to the current one
  - adjusts the name of the inital perspective in the new workspace.
    It tries to get the name from the
    `perspective-exwm-override-initial-name' variable and falls back to
@@ -353,6 +382,8 @@ inital workspaces are created with the new perspective names."
                       :around #'perspective-exwm--workspace-switch-create-around)
           (advice-add #'persp-buffer-in-other-p
                       :override #'perspective-exwm--persp-buffer-in-other-p)
+          (advice-add #'persp-set-buffer
+                      :override #'perspective-exwm--persp-set-buffer-override)
           (add-hook 'exwm-init-hook #'perspective-exwm--after-exwm-init))
       (advice-remove #'persp-delete-frame
                      #'perspective-exwm--delete-frame-around)
@@ -362,6 +393,8 @@ inital workspaces are created with the new perspective names."
                      #'perspective-exwm--workspace-switch-create-around)
       (advice-remove #'persp-buffer-in-other-p
                      #'perspective-exwm--persp-buffer-in-other-p)
+      (advice-remove #'persp-set-buffer
+                     #'perspective-exwm--persp-set-buffer-override)
       (remove-hook 'exwm-init-hook #'perspective-exwm--after-exwm-init))))
 
 (provide 'perspective-exwm)
