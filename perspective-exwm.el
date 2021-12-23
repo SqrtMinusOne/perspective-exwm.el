@@ -5,7 +5,7 @@
 
 ;; Author: Korytov Pavel <thexcloud@gmail.com>
 ;; Maintainer: Korytov Pavel <thexcloud@gmail.com>
-;; Version: 0.1.2
+;; Version: 0.1.3
 ;; Package-Requires: ((emacs "27.1") (burly "0.2-pre") (exwm "0.26") (perspective "2.17"))
 ;; Homepage: https://github.com/SqrtMinusOne/perspective-exwm.el
 
@@ -39,16 +39,22 @@
   :group 'frames)
 
 (defun perspective-exwm--get-class ()
+  "A function to return the current EXWM class name."
   exwm-class-name)
 
 (defun perspective-exwm--get-title ()
+  "A function to return the current EXWM window title."
   exwm-title)
 
 (defcustom perspective-exwm-get-exwm-buffer-name #'perspective-exwm--get-class
   "A function to get the EXWM buffer title.
 
 Meant to be ran in the context of the target buffer, e.g. with
-`with-current-buffer'."
+`with-current-buffer'.
+
+The two default options are:
+- `perspective-exwm--get-class' - returns EXWM class
+- `perspective-exwm--get-title' - returns EXWM title"
   :group 'perspective-exwm
   :type 'function
   :options '(perspective-exwm--get-class perspective-exwm--get-title))
@@ -193,40 +199,30 @@ If MOVE is t, move the perspective instead."
 (defun perspective-exwm--delete-frame-around (fun &rest args)
   "An advice around `persp-delete-frame'.
 
+FUN is `persp-delete-frame', ARGS are passed to FUN with `apply'.
+
 Do not run the function if the frame is floating, because it
 occasionally breaks the current perspective in the \"parent\"
 frame."
   (unless (and (derived-mode-p 'exwm-mode) exwm--floating-frame)
     (apply fun args)))
 
-(defvar perspective-exwm-workspace--create-index nil
-  "Index of an EXWM workspace under creation.")
-
-(defun perspective-exwm--workspace-switch-create-around (fun &rest args)
-  "An advice around `exwm-workspace-switch-create'.
-
-This is necessary because the frame is created with `make-frame', and
-`exwm-workspace-current-index' is getting set with a hook in
-`after-make-frame-functions'.  However, the inital perspective is also
-initalized with the same hook, so if perspective.el is loaded before
-EXWM (which is generally the case), the advice
-`perspective-exwm--init-frame-around' won't have any way to know the
-actual index of the current workspace.
-
-So this advice binds the index of the workspace to be created to the
-variable `perspective-exwm-workspace--create-index'."
-  (let ((perspective-exwm-workspace--create-index (nth 0 args)))
-    (apply fun args)))
-
 (defun perspective-exwm--init-frame-around (fun &rest args)
   "An advice around `persp-init-frame'.
 
 Overrides `persp-initial-frame-name' according to
-`perspective-exwm-override-initial-name'."
+`perspective-exwm-override-initial-name'.
+
+FUN should be `persp-init-frame', ARGS are passed to FUN with `apply'.
+
+The first argument of ARGS is frame.  Thus, the workspace index is
+either the position of the frame in `exwm-workspace--list', or a
+length of that list if it's not yet there.  This approach seems
+to work best, e.g. when doing `exwm-workspace-switch-create' and
+creating multiple workspaces at once."
   (let* ((workspace-index
-          (or (and (numberp perspective-exwm-workspace--create-index)
-                   perspective-exwm-workspace--create-index)
-              exwm-workspace-current-index))
+          (or (cl-position (car args) exwm-workspace--list)
+              (length exwm-workspace--list)))
          (persp-initial-frame-name
           (or
            (cdr (assoc workspace-index
@@ -235,10 +231,12 @@ Overrides `persp-initial-frame-name' according to
     (apply fun args)))
 
 (defun perspective-exwm--after-exwm-init ()
-  "Create perspectives in workspaces in accordance with
-  `perspective-exwm-override-initial-name'.
+  "Create perspectives in workspaces.
 
-This is meant to be run from `exwm-init-hook'."
+`perspective-exwm-override-initial-name' determines initial names
+of perspectives..
+
+The function is meant to be run from `exwm-init-hook'."
   (cl-loop for workspace-index from 0 to (exwm-workspace--count)
            for frame in exwm-workspace--list
            for target-name = (or
@@ -253,7 +251,7 @@ This is meant to be run from `exwm-init-hook'."
 
 
 (cl-defun perspective-exwm--persp-buffer-in-other-p (buffer)
-  "Returns nil if BUFFER is only in the current perspective.
+  "Return nil if BUFFER is only in the current perspective.
 Otherwise, returns (FRAME . NAME), the frame and name of another
 perspective that has the buffer.
 
@@ -276,8 +274,7 @@ only in one frame."
   nil)
 
 (defun perspective-exwm--persp-set-buffer-override (buffer-or-name)
-  "Associate BUFFER-OR-NAME with the current perspective and remove
-it from any other.
+  "Move BUFFER-OR-NAME to the current perspective.
 
 The original version `persp-set-buffer' from perspective.el
 sometimes copies perspectives from all other workspaces to the
@@ -326,13 +323,12 @@ perspective.
 
 The function is useful to be ran from `exwm-manage-finish-hook',
 e.g. like this:
-(defun my/exwm-configure-window ()
+\(defun my/exwm-configure-window ()
   (interactive)
   (pcase exwm-class-name
     ((or \"Firefox\" \"Nightly\") (perspective-exwm-assign-window
                                :workspace-index 2
-                               :persp-name \"browser\"))))
-"
+                               :persp-name \"browser\"))))"
   (let ((buffer-name (buffer-name))
         (buffer (current-buffer)))
     (when (and workspace-index (not (= workspace-index exwm-workspace-current-index)))
@@ -378,8 +374,6 @@ inital workspaces are created with the new perspective names."
                       :around #'perspective-exwm--delete-frame-around)
           (advice-add #'persp-init-frame
                       :around #'perspective-exwm--init-frame-around)
-          (advice-add #'exwm-workspace-switch-create
-                      :around #'perspective-exwm--workspace-switch-create-around)
           (advice-add #'persp-buffer-in-other-p
                       :override #'perspective-exwm--persp-buffer-in-other-p)
           (advice-add #'persp-set-buffer
@@ -389,8 +383,6 @@ inital workspaces are created with the new perspective names."
                      #'perspective-exwm--delete-frame-around)
       (advice-remove #'persp-init-frame
                      #'perspective-exwm--init-frame-around)
-      (advice-remove #'exwm-workspace-switch-create
-                     #'perspective-exwm--workspace-switch-create-around)
       (advice-remove #'persp-buffer-in-other-p
                      #'perspective-exwm--persp-buffer-in-other-p)
       (advice-remove #'persp-set-buffer
