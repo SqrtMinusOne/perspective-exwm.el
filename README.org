@@ -24,8 +24,8 @@ The package provides a minor mode, =perspective-exwm-mode=, which is meant to be
   The mode does a couple of things:
   - advises away a bug with half-killing the current perspective when closing a floating window. I haven't tested this as thoroughly, so run =M-x perspective-exwm-revive-perspectives= if the problem arises anyway.
   - fixes a bug with running =persp-set-buffer= on an EXWM buffer that was moved between workspaces by advising =persp-buffer-in-other-p=.
-  - fixes a bug when occasionally =persp-set-buffer= copied all the perspective from another workspaces to the current one.
-  - adjusts the name of the inital perspective in the new workspace. It tries to get the name from the =perspective-exwm-override-initial-name= variable and fallbacks to =main-<index>=.
+  - fixes a bug with =persp-set-buffer= copying all the perspectives from other workspaces to the current one.
+  - adjusts the name of the initial perspective in the new workspace. It tries to get the name from the =perspective-exwm-override-initial-name= variable and fallbacks to =main-<index>=.
 
   For the last point, I have the following in my configuration:
   #+begin_src emacs-lisp
@@ -37,9 +37,9 @@ The package provides a minor mode, =perspective-exwm-mode=, which is meant to be
         (4 . "dev")))
   #+end_src
 
-  This also serves a purpose, because otherwise there are issues with multiple perspectives sharing the same scratch buffer.
+  Having distinct perspective names between frames also serves a purpose, because otherwise there are issues with multiple perspectives sharing the same scratch buffer.
 - =M-x perspective-exwm-cycle-exwm-buffers-forward=, =perspective-exwm-cycle-exwm-buffers-backward=\\
-  Cycles EXWM buffers in the current perspective.
+  Cycle EXWM buffers in the current perspective.
 
   [[./img/cycle-buffers.png]]
 
