@@ -22,7 +22,7 @@ The package provides a minor mode, =perspective-exwm-mode=, which is meant to be
 * Usage and details
 - =perspective-exwm-mode=\\
   The mode does a couple of things:
-  - advises away a bug with half-killing the current perspective when closing a floating window. I haven't tested this as thoroughly, so run =M-x perspective-exwm-revive-perspectives= if the problem arises anyway.
+  - advises away a bug with half-killing the current perspective when closing a floating window. +I haven't tested this as thoroughly+ I haven't run into this issue for nearly a month, so it seems to be fixed. But there's =M-x perspective-exwm-revive-perspectives= if the problem arises anyway.
   - fixes a bug with running =persp-set-buffer= on an EXWM buffer that was moved between workspaces by advising =persp-buffer-in-other-p=.
   - fixes a bug with =persp-set-buffer= copying all the perspectives from other workspaces to the current one.
   - adjusts the name of the initial perspective in the new workspace. It tries to get the name from the =perspective-exwm-override-initial-name= variable and fallbacks to =main-<index>=.
