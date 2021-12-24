@@ -65,6 +65,30 @@ The two default options are:
   :type '(alist :key-type (integer :tag "EXWM workspace index")
                 :value-type (string :tag "Initial perspective name")))
 
+(defface perspective-exwm-cycle-current-face
+  '((t (:inherit warning)))
+  "Face for the current buffer in the buffer cycling message."
+  :group 'perspective-exwm)
+
+(defface perspective-exwm-cycle-skip-face
+  '((t (:inherit persp-selected-face)))
+  "Face for the buffer to skip in the buffer cycling message."
+  :group 'perspective-exwm)
+
+(defface perspective-exwm-current-workspace-face
+  '((t (:inherit warning)))
+  "Face for the current workspace number.
+
+Used in `perspective-exwm-switch-perspective'."
+  :group 'perspective-exwm)
+
+(defface perspective-exwm-selected-pespective-face
+  '((t (:inherit persp-selected-face)))
+  "Face for the selected perspective.
+
+Used in `perspective-exwm-switch-perspective'."
+  :group 'perspective-exwm)
+
 (defun perspective-exwm--cycle-exwm-buffers (dir)
   "Cycle EXWM buffers in the current perspective.
 
@@ -104,9 +128,9 @@ buffer is highlighted with `persp-selected-face'"
                   for is-current = (eq (current-buffer) buf)
                   for is-skip = (not (member buf cycle-buffers))
                   if is-current
-                  concat (concat "[" (propertize name 'face 'warning) "] ") into res
+                  concat (concat "[" (propertize name 'face 'perspective-exwm-cycle-current-face) "] ") into res
                   else if is-skip
-                  concat (concat "[" (propertize name 'face 'persp-selected-face) "] ") into res
+                  concat (concat "[" (propertize name 'face 'perspective-exwm-cycle-skip-face) "] ") into res
                   else
                   concat (format " %s  " name) into res
                   finally return res))))))
@@ -149,13 +173,13 @@ detail."
                                            (propertize
                                             (format "[%s]" workspace-name)
                                             'face
-                                            'warning)
+                                            'perspective-exwm-current-workspace-face)
                                          (format "[%s]" workspace-name))
                                        (if (string-equal persp-name current-persp-name)
                                            (propertize
                                             persp-name
                                             'face
-                                            'persp-selected-face)
+                                            'perspective-exwm-selected-pespective-face)
                                          persp-name))
                                (cons i persp-name))))))
          (choice (cdr (assoc (completing-read "Select a perspective: " choices) choices))))
