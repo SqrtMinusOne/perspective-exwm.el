@@ -211,24 +211,22 @@ If MOVE is t, move the perspective instead."
   (when (and move (= 1 (hash-table-count (perspectives-hash))))
     (error "Can't move the only workspace"))
   (let* ((target-workspace (exwm-workspace--prompt-for-workspace))
-         (persp (persp-curr))
          (persp-name (persp-current-name))
-         (url (burly-windows-url)))
+         (url (burly-windows-url))
+         (buffers (persp-current-buffers)))
     (unless (= (cl-position target-workspace exwm-workspace--list)
                exwm-workspace-current-index)
+      (when (gethash persp-name (perspectives-hash target-workspace))
+        (error "Perspective with name \"%s\" already exists on the target workspace" persp-name))
       (with-selected-frame target-workspace
-        (when (gethash persp-name (perspectives-hash))
-          (error "Perspective with name \"%s\" already exists on the target workspace" persp-name))
-        (puthash persp-name (copy-tree (copy-perspective persp)) (perspectives-hash))
         (with-perspective persp-name
-          ;; (run-hooks 'persp-created-hook)
-          (persp-update-modestring)))
+          (mapcar #'persp-add-buffer buffers)
+          (burly-open-url url))
+        (persp-switch persp-name)
+        (persp-update-modestring))
       (when move
         (persp-kill persp-name))
-      (exwm-workspace-switch target-workspace)
-      (persp-switch persp-name)
-      (burly-open-url url)
-      (persp-update-modestring))))
+      (exwm-workspace-switch target-workspace))))
 
 ;;;###autoload
 (defun perspective-exwm-move-to-workspace ()
