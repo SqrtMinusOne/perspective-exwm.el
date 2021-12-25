@@ -220,7 +220,7 @@ If MOVE is t, move the perspective instead."
         (error "Perspective with name \"%s\" already exists on the target workspace" persp-name))
       (with-selected-frame target-workspace
         (with-perspective persp-name
-          (mapcar #'persp-add-buffer buffers)
+          (mapc #'persp-add-buffer buffers)
           (burly-open-url url))
         (persp-switch persp-name)
         (persp-update-modestring))
@@ -367,8 +367,7 @@ e.g. like this:
     ((or \"Firefox\" \"Nightly\") (perspective-exwm-assign-window
                                :workspace-index 2
                                :persp-name \"browser\"))))"
-  (let ((buffer-name (buffer-name))
-        (buffer (current-buffer)))
+  (let ((buffer (current-buffer)))
     (when (and workspace-index (not (= workspace-index exwm-workspace-current-index)))
       (exwm-workspace-move-window workspace-index))
     (when persp-name
