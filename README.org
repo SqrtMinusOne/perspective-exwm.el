@@ -1,12 +1,14 @@
 #+TITLE: perspective-exwm
 
+[[https://melpa.org/#/perspective-exwm][file:https://melpa.org/packages/perspective-exwm-badge.svg]]
+
 A couple of tricks and fixes to make using [[https://github.com/ch11ng/exwm][EXWM]] and [[https://github.com/nex3/perspective-el][perspective.el]] a better experience.
 
 * Installation
-While this package isn't available anywhere but here, you can install it directly from the repo, e.g.:
+This package is available on MELPA. Install it however you usually install packages, I use [[https://github.com/jwiegley/use-package][use-package]] and [[https://github.com/raxod502/straight.el][straight.el]]:
 #+begin_src emacs-lisp
 (use-package perspective-exwm
-  :straight (:host github :repo "SqrtMinusOne/perspective-ewxm.el"))
+  :straight t)
 #+end_src
 Or clone the repository, add the package to the =load-path= and load it with =require=.
 
