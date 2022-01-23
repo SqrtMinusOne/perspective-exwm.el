@@ -245,6 +245,11 @@ frame."
   (unless (and (derived-mode-p 'exwm-mode) exwm--floating-frame)
     (apply fun args)))
 
+(defvar perspective-exwm--override-current-index nil
+  "The true index of the workspace under creation.
+
+Overrides the index in `perspective-exwm--init-frame-around'.")
+
 (defun perspective-exwm--init-frame-around (fun &rest args)
   "An advice around `persp-init-frame'.
 
@@ -259,7 +264,8 @@ length of that list if it's not yet there.  This approach seems
 to work best, e.g. when doing `exwm-workspace-switch-create' and
 creating multiple workspaces at once."
   (let* ((workspace-index
-          (or (cl-position (car args) exwm-workspace--list)
+          (or perspective-exwm--override-current-index
+              (cl-position (car args) exwm-workspace--list)
               (length exwm-workspace--list)))
          (persp-initial-frame-name
           (or
@@ -268,11 +274,21 @@ creating multiple workspaces at once."
            (format "main-%s" (funcall exwm-workspace-index-map workspace-index)))))
     (apply fun args)))
 
+(defun perspective-exwm--workspace-add-around (fun &rest args)
+  "An advice around `exwm-workspace-add'.
+
+This is necessary because `exwm-workspace-add' first calls
+`make-frame' and only then moves it to the right index,
+i.e. there is no way to determine the true index of workspace
+under creation `persp-init-frame'."
+  (let ((perspective-exwm--override-current-index (car args)))
+    (apply fun args)))
+
 (defun perspective-exwm--after-exwm-init ()
   "Create perspectives in workspaces.
 
 `perspective-exwm-override-initial-name' determines initial names
-of perspectives..
+of perspectives.
 
 The function is meant to be run from `exwm-init-hook'."
   (cl-loop for workspace-index from 0 to (exwm-workspace--count)
@@ -415,6 +431,8 @@ inital workspaces are created with the new perspective names."
                       :override #'perspective-exwm--persp-buffer-in-other-p)
           (advice-add #'persp-set-buffer
                       :override #'perspective-exwm--persp-set-buffer-override)
+          (advice-add #'exwm-workspace-add
+                      :around #'perspective-exwm--workspace-add-around)
           (add-hook 'exwm-init-hook #'perspective-exwm--after-exwm-init))
       (advice-remove #'persp-delete-frame
                      #'perspective-exwm--delete-frame-around)
@@ -424,6 +442,8 @@ inital workspaces are created with the new perspective names."
                      #'perspective-exwm--persp-buffer-in-other-p)
       (advice-remove #'persp-set-buffer
                      #'perspective-exwm--persp-set-buffer-override)
+      (advice-remove #'exwm-workspace-add
+                     #'perspective-exwm--workspace-add-around)
       (remove-hook 'exwm-init-hook #'perspective-exwm--after-exwm-init))))
 
 (provide 'perspective-exwm)
