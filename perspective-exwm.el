@@ -250,6 +250,9 @@ frame."
 
 Overrides the index in `perspective-exwm--init-frame-around'.")
 
+(defvar perspective-exwm--is-floating nil
+  "If true, the frame under creation is floating.")
+
 (defun perspective-exwm--init-frame-around (fun &rest args)
   "An advice around `persp-init-frame'.
 
@@ -271,11 +274,30 @@ creating multiple workspaces at once."
           (or
            (cdr (assoc workspace-index
                        perspective-exwm-override-initial-name))
-           (format "main-%s" (funcall exwm-workspace-index-map workspace-index)))))
+           (format "main-%s" (funcall exwm-workspace-index-map workspace-index))))
+         (persp-initial-frame-name
+          (if perspective-exwm--is-floating
+              (format "%s-floating" persp-initial-frame-name)
+            persp-initial-frame-name)))
+    (apply fun args)))
+
+(defun perspective-exwm--floating-set-floating-around (fun &rest args)
+  "An advice around `exwm-floating--set-floating'.
+
+FUN should be `exwm-floating--set-floating', ARGS are passed to
+FUN with `apply'.
+
+This function creates a floating window, so this advice indicates
+that with seting `perspective-exwm--is-floating'"
+  (let ((perspective-exwm--override-current-index exwm-workspace-current-index)
+        (perspective-exwm--is-floating t))
     (apply fun args)))
 
 (defun perspective-exwm--workspace-add-around (fun &rest args)
   "An advice around `exwm-workspace-add'.
+
+FUN should be `exwm-workspace-add', ARGS are passed to FUN with
+`apply'.
 
 This is necessary because `exwm-workspace-add' first calls
 `make-frame' and only then moves it to the right index,
@@ -433,6 +455,8 @@ inital workspaces are created with the new perspective names."
                       :override #'perspective-exwm--persp-set-buffer-override)
           (advice-add #'exwm-workspace-add
                       :around #'perspective-exwm--workspace-add-around)
+          (advice-add #'exwm-floating--set-floating
+                      :around #'perspective-exwm--floating-set-floating-around)
           (add-hook 'exwm-init-hook #'perspective-exwm--after-exwm-init))
       (advice-remove #'persp-delete-frame
                      #'perspective-exwm--delete-frame-around)
@@ -444,6 +468,8 @@ inital workspaces are created with the new perspective names."
                      #'perspective-exwm--persp-set-buffer-override)
       (advice-remove #'exwm-workspace-add
                      #'perspective-exwm--workspace-add-around)
+      (advice-remove #'exwm-floating--set-floating
+                     #'perspective-exwm--floating-set-floating-around)
       (remove-hook 'exwm-init-hook #'perspective-exwm--after-exwm-init))))
 
 (provide 'perspective-exwm)
