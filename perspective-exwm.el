@@ -1,6 +1,6 @@
 ;;; perspective-exwm.el --- Better integration for perspective.el and EXWM -*- lexical-binding: t -*-
 
-;; Copyright (C) 2021 Korytov Pavel
+;; Copyright (C) 2021-2022 Korytov Pavel
 ;; Copyright (C) 2008-2020 Natalie Weizenbaum <nex342@gmail.com>
 
 ;; Author: Korytov Pavel <thexcloud@gmail.com>
