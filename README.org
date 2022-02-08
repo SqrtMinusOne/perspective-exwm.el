@@ -77,3 +77,6 @@ The package provides a minor mode, =perspective-exwm-mode=, which is meant to be
 
   (add-hook 'exwm-manage-finish-hook #'my/exwm-configure-window)
   #+end_src
+
+* Known issues
+- =perspective-exwm-move-to-workspace= kills X windows in the perspective it tries to move. Have no idea how to fix this at the moment.
