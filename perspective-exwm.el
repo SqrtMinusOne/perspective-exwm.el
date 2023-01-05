@@ -199,8 +199,10 @@ detail."
                                          persp-name))
                                (cons i persp-name))))))
          (choice (cdr (assoc (completing-read "Select a perspective: " choices) choices))))
-    (exwm-workspace-switch (car choice))
-    (persp-switch (cdr choice))))
+    (exwm--defer
+     0 (lambda ()
+         (exwm-workspace-switch (car choice))
+         (persp-switch (cdr choice))))))
 
 ;;;###autoload
 (defun perspective-exwm-copy-to-workspace (&optional move)
