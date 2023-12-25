@@ -8,6 +8,7 @@
 ;; Version: 0.2.0
 ;; Package-Requires: ((emacs "27.1") (burly "0.2-pre") (exwm "0.26") (perspective "2.17"))
 ;; Homepage: https://github.com/SqrtMinusOne/perspective-exwm.el
+;; Published-At: 2021-12-01
 
 ;; This file is NOT part of GNU Emacs.
 
