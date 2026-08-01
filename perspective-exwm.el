@@ -182,6 +182,20 @@ CYCLE-BUFFERS are the buffers to cycle through."
                                  (propertize (number-to-string (length after-stack))
                                              'face 'perspective-exwm-cycle-skip-face))))))))
 
+;;; XXX eddd6d9e97d6557be3d707b573dcd84e07ed0f16 has changed
+;;; `persp--make-ignore-buffer-rx' to `persp--ignore-buffer-p'
+(declare-function persp--make-ignore-buffer-rx "perspective")
+(declare-function persp--ignore-buffer-p "perspective")
+
+(defun perspective-exwm--cycle-ignore-p (name)
+  "Check if buffer NAME is to be excluded from cycling.
+
+This exists to preverse backwards compat with different versions of
+perspective.el."
+  (if (fboundp #'persp--ignore-buffer-p)
+      (persp--ignore-buffer-p name)
+    (string-match-p (persp--make-ignore-buffer-rx) name)))
+
 (defun perspective-exwm--cycle-exwm-buffers (dir &optional all)
   "Cycle buffers in the current perspective.
 
@@ -203,7 +217,7 @@ buffer is highlighted with `persp-selected-face'"
                    for is-another = (and (get-buffer-window buf) (not (eq current buf)))
                    if (and (buffer-live-p buf)
                            (or all (eq 'exwm-mode (buffer-local-value 'major-mode buf)))
-                           (not (string-match-p ignore-rx (buffer-name buf))))
+                           (not (perspective-exwm--cycle-ignore-p (buffer-name buf))))
                    collect buf into all-buffers
                    and if (not is-another) collect buf into cycle-buffers
                    finally (return (list all-buffers cycle-buffers))))
