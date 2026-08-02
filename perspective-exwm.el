@@ -211,7 +211,6 @@ The function prints out the state to the messages.  The current
 buffer after the switch is highlighted with `warning', skipped
 buffer is highlighted with `persp-selected-face'"
   (let* ((current (current-buffer))
-         (ignore-rx (persp--make-ignore-buffer-rx))
          (exwm-data
           (cl-loop for buf in (persp-current-buffers)
                    for is-another = (and (get-buffer-window buf) (not (eq current buf)))
