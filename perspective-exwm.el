@@ -403,7 +403,7 @@ under creation `persp-init-frame'."
     (apply fun args)))
 
 (defun perspective-exwm--after-exwm-init ()
-  "Create perspectives in workspaces.
+  "Set initial perspective names in workspaces.
 
 `perspective-exwm-override-initial-name' determines initial names
 of perspectives.
@@ -418,8 +418,11 @@ The function is meant to be run from `exwm-init-hook'."
            do (with-selected-frame frame
                 (let ((current-name (persp-current-name)))
                   (unless (string-equal current-name target-name)
-                    (persp-switch target-name)
-                    (persp-kill current-name))))))
+                    ;; Killing the old perspective would also kill its
+                    ;; buffers, including logs of running compiler processes.
+                    (if (gethash target-name (perspectives-hash))
+                        (persp-switch target-name)
+                      (persp-rename target-name)))))))
 
 
 (cl-defun perspective-exwm--persp-buffer-in-other-p (buffer)
