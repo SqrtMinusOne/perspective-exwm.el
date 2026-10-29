@@ -403,13 +403,13 @@ under creation `persp-init-frame'."
     (apply fun args)))
 
 (defun perspective-exwm--after-exwm-init ()
-  "Set initial perspective names in workspaces.
+  "Set initial perspective names and scratch buffers in workspaces.
 
 `perspective-exwm-override-initial-name' determines initial names
-of perspectives.
+of perspectives.  New scratch buffers use `initial-major-mode'.
 
 The function is meant to be run from `exwm-init-hook'."
-  (cl-loop for workspace-index from 0 to (exwm-workspace--count)
+  (cl-loop for workspace-index from 0
            for frame in exwm-workspace--list
            for target-name = (or
                               (cdr (assoc workspace-index
@@ -417,12 +417,24 @@ The function is meant to be run from `exwm-init-hook'."
                               (format "main-%s" (funcall exwm-workspace-index-map workspace-index)))
            do (with-selected-frame frame
                 (let ((current-name (persp-current-name)))
-                  (unless (string-equal current-name target-name)
-                    ;; Killing the old perspective would also kill its
-                    ;; buffers, including logs of running compiler processes.
-                    (if (gethash target-name (perspectives-hash))
-                        (persp-switch target-name)
-                      (persp-rename target-name)))))))
+                  (if (and (not (string-equal current-name target-name))
+                           (gethash target-name (perspectives-hash)))
+                      (persp-switch target-name)
+                    (let* ((old-scratches (delq nil (list (get-buffer "*scratch*")
+                                                         (get-buffer (persp-scratch-buffer)))))
+                           ;; Creating this first prevents `persp-rename' from
+                           ;; renaming a scratch still used by another frame.
+                           (scratch (persp-get-scratch-buffer target-name)))
+                      (unless (string-equal current-name target-name)
+                        (persp-rename target-name))
+                      (persp-add-buffer scratch)
+                      (dolist (old old-scratches)
+                        (unless (eq old scratch)
+                          (dolist (window (get-buffer-window-list old nil frame))
+                            (set-window-buffer window scratch))
+                          ;; Forgetting preserves the buffer and its processes.
+                          (persp-forget-buffer old)))
+                      (persp-save)))))))
 
 
 (cl-defun perspective-exwm--persp-buffer-in-other-p (buffer)
